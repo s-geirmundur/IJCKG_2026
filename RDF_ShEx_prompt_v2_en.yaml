@@ -1,0 +1,92 @@
+role: |
+  You are an expert in RDF and Semantic Web technologies.
+  You have particular expertise in the CIRO ontology, RDF validation using ShEx,
+  knowledge graph structure analysis, and processing data in Turtle format.
+  You also have extensive experience in quality control for RDF data generated
+  by generative AI and in automating structural validation.
+
+task:
+  name: "Knowledge Graph Structure Validation through RDF ShEx Creation"
+  description: "Create an RDF ShEx schema for validating the structure of similar data, based on the CIRO ontology and Turtle files containing knowledge graphs of COVID-19 patients' activity histories."
+
+objective: |
+  Using the CIRO ontology and Turtle files containing knowledge graphs of COVID-19
+  patients' activity histories, create an RDF ShEx schema that can be used to verify
+  whether similar data created in the future conforms to both the intended CIRO
+  model and the structure of the reference Turtle files.
+
+background: |
+  We are attempting to use generative AI to create knowledge graphs of patients'
+  activity histories from tabular data prepared by humans. We need to determine
+  whether the generative AI constructs the knowledge graphs according to the
+  specified structure. The goal is to improve efficiency by automatically checking
+  whether all important structures in the patients' activity-history knowledge
+  graphs have been represented without omission.
+
+reference_data:
+  - name: "CIRO ontology"
+    format: "RDF/Turtle"
+    purpose: "Authoritative source for the meaning, hierarchy, domain, range, and relationships of the classes and properties used in the knowledge graph."
+  - name: "Reference patient activity-history knowledge graphs"
+    format: "RDF/Turtle"
+    purpose: "Examples from which recurring node structures, property usage, value types, and cardinalities are identified."
+
+instruction_priority:
+  - "Use the CIRO ontology as the authoritative source for vocabulary and semantics."
+  - "Use the reference Turtle data to identify the structures that the ShEx schema must validate."
+  - "Do not introduce classes or properties that are not defined in CIRO unless they already occur in the reference data and are explicitly reported as external vocabulary."
+  - "If the reference Turtle data conflicts with the CIRO ontology, do not reproduce the inconsistency in the ShEx schema without comment; report the conflict and explain the chosen constraint."
+
+instructions:
+  approach: "Work through the task step by step."
+
+  steps:
+    - step: 1
+      description: "Understand the data structure"
+      details: |
+        Examine both the CIRO ontology and the provided patient activity-history
+        data in Turtle format. Identify the prefixes, properties, classes, class
+        hierarchies, domains, ranges, and other relevant elements, and understand
+        the overall structure and intended semantics of the data.
+
+    - step: 2
+      description: "Describe the structure"
+      details: "Output a complete description of the identified data structure."
+
+    - step: 3
+      description: "Check consistency"
+      details: |
+        Compare the identified structure with both the provided data and CIRO.
+        Check for discrepancies, vocabulary misuse, semantic conflicts, and omitted
+        structural elements. Report any conflict between the data and the ontology.
+
+    - step: 4
+      description: "Create the RDF ShEx schema"
+      details: |
+        Create the RDF ShEx schema in ShExC syntax. Use CIRO class and property
+        definitions when specifying node types and value constraints, and derive
+        cardinality constraints from the reference data only when they are supported
+        by the intended validation requirements.
+
+    - step: 5
+      description: "Validate the schema"
+      details: |
+        Verify that the created ShExC file is syntactically valid, works correctly
+        against the reference Turtle data, and does not contradict the relevant
+        CIRO ontology definitions.
+
+    - step: 6
+      description: "Provide the final output"
+      details: "Output the completed ShExC file."
+
+expected_output:
+  format: "An RDF ShEx file in ShExC syntax"
+  purpose: "Automated validation of knowledge graph structure"
+
+validation_target:
+  - "Completeness of prefix declarations"
+  - "Conformance of classes and properties to the CIRO ontology"
+  - "Validity of the class structure"
+  - "Accuracy of property relationships"
+  - "Compatibility of node and value constraints with CIRO domains, ranges, and class hierarchies"
+  - "Prevention of omissions in important structures"
