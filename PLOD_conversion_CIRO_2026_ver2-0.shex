@@ -1,0 +1,257 @@
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX schema: <http://schema.org/>
+PREFIX time:   <http://www.w3.org/2006/time#>
+PREFIX plod:   <http://plod.info/rdf/>
+PREFIX data:   <http://plod.info/data/>
+
+# PLOD application profile for RDF generated from patient behavior-history JSON.
+# Version 2.0 — relaxed profile, aligned with JSON2RDF prompt v2.
+#
+# Normative vocabulary source:
+#   CIRO (COVID-19 Infection Risk Ontology)
+#
+# Namespaces:
+# - plod: is the CIRO vocabulary namespace. No new resources are minted here.
+# - data: is the namespace for generated instance resources.
+#
+# Modeling rules applied by this profile:
+# - Attach behavioral risk contexts to schema:Event with plod:context.
+# - Attach spatial (and, when relevant, behavioral) risk contexts to
+#   plod:Situation with plod:context.
+# - Do not use legacy properties such as plod:situationOfActivity.
+# - Do not use plod:situationOfAction or plod:situationOfSpace on events or
+#   situations. In CIRO they are subproperties of plod:situation, whose domain
+#   is schema:Place.
+# - Represent interval boundaries with time:Instant resources.
+# - Represent duration explicitly as an integer number of minutes. This makes
+#   CIRO's numeric duration restrictions evaluable without unit conversion.
+#
+# Changes from version 1.0:
+# - Interval representation is split into <CompleteIntervalShape> and
+#   <PartialIntervalShape>. Version 1.0 required beginning, end and duration
+#   on every interval, which made every event with a missing clock time
+#   nonconformant and left ShEx validation unable to distinguish real
+#   structural errors from expected source-data gaps. The two shapes are
+#   mutually exclusive, so the shape a node satisfies now reports whether the
+#   interval is usable for duration-dependent inference.
+# - schema:location on <EventShape> is optional. The conversion prompt forbids
+#   inventing a place that is not in the source data, so an unknown place must
+#   not make the event nonconformant.
+# - Properties the prompt forbids are now enforced with {0} cardinality on
+#   <EventShape> and <SituationShape> instead of being left to prose. In
+#   version 1.0 they were only mentioned in comments, so a graph using them
+#   still validated.
+#
+# Deliberately NOT constrained here:
+# - plod:afford is not mentioned in <PlaceShape>. CIRO asserts afford at the
+#   class level, and some afforded individuals (e.g. plod:alcoholDrinking) are
+#   declared only as plod:BehavioralRiskContext, so listing plod:afford with a
+#   value set would reject ontology-derived data. Shapes are open, so afford
+#   triples are simply ignored by this profile.
+#
+# ShEx validates graph structure only. It does not infer rdf:type
+# plod:CloseContact, plod:Crowding, plod:ClosedSpace or their level
+# subclasses. Report structural conformance and reasoner classification
+# separately.
+
+START = @<EventShape>
+     OR @<SituationShape>
+     OR @<PlaceShape>
+     OR @<AgentShape>
+     OR @<AnyIntervalShape>
+     OR @<InstantShape>
+     OR @<DurationShape>
+
+<EventShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [ schema:Event ] ;
+  rdfs:label . * ;
+  rdfs:comment . * ;
+  plod:time @<AnyIntervalShape> ;
+  schema:location @<PlaceShape> ? ;
+  plod:agent @<AgentShape> + ;
+  plod:action @<ActionValueShape> * ;
+  plod:context @<BehavioralContextValueShape> * ;
+  # Prohibited on events. plod:situationOf* are subproperties of
+  # plod:situation (domain schema:Place); plod:isSituationOf has domain
+  # plod:Situation; plod:situationOfActivity is a legacy property absent from
+  # CIRO. Asserting any of them would make a reasoner classify the event as
+  # something it is not.
+  plod:situationOfAction . {0} ;
+  plod:situationOfSpace . {0} ;
+  plod:situationOfActivity . {0} ;
+  plod:isSituationOf . {0}
+}
+
+# A Situation describes the state of a place during a time interval.
+# Behavioral contexts are also permitted here because CIRO's Crowding classes
+# combine behavioral and spatial context restrictions on the same resource.
+#
+# plod:isSituationOf stays required: CIRO derives plod:MediumLevelClosedSpace
+# from the type of the place it points to, so a Situation without it carries no
+# inferable spatial meaning. A Situation is therefore only created once a place
+# has been identified.
+<SituationShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [ plod:Situation ] ;
+  rdfs:label . * ;
+  rdfs:comment . * ;
+  plod:isSituationOf @<PlaceShape> ;
+  plod:time @<AnyIntervalShape> ;
+  plod:context @<ContextValueShape> * ;
+  # Prohibited on situations, for the same reasons as on events.
+  # schema:location has domain schema:Event in CIRO, so a situation must link
+  # to its place with plod:isSituationOf instead.
+  plod:situationOfAction . {0} ;
+  plod:situationOfSpace . {0} ;
+  plod:situationOfActivity . {0} ;
+  schema:location . {0}
+}
+
+<PlaceShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [
+    schema:Place
+    plod:Airplane
+    plod:Bar
+    plod:Bus
+    plod:CoffeeShop
+    plod:ConcertHall
+    plod:DentalClinic
+    plod:GroceryStore
+    plod:Gym
+    plod:HairSalon
+    plod:Home
+    plod:Hospital
+    plod:IndoorFacility
+    plod:IndoorPartyVenue
+    plod:IndoorSportsFacility
+    plod:LiveTheater
+    plod:MedicalOffice
+    plod:MovieTheater
+    plod:Museum
+    plod:Nightclub
+    plod:Office
+    plod:OutdoorFacility
+    plod:OutdoorRestaurant
+    plod:OutdoorSportsFacility
+    plod:Public_transportation
+    plod:Railway
+    plod:ReligiousFacility
+    plod:Restaurant
+    plod:RetailStore
+    plod:School
+    plod:Subway
+    plod:Taxi
+  ] + ;
+  rdfs:label . * ;
+  rdfs:comment . * ;
+  plod:city IRI ?
+}
+
+# CIRO defines plod:agent with a range of schema:Person or
+# schema:Organization. Agents must therefore be typed accordingly.
+<AgentShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [ schema:Person schema:Organization ] + ;
+  rdfs:label . * ;
+  rdfs:comment . *
+}
+
+# ---------------------------------------------------------------------------
+# Time intervals
+#
+# <AnyIntervalShape> is what events and situations point at. It resolves to
+# exactly one of the two shapes below, which are mutually exclusive:
+#
+#   <CompleteIntervalShape>  beginning, end and duration all present.
+#                            Usable for CIRO's duration-dependent classes
+#                            (plod:MediumLevelCloseContact and above).
+#   <PartialIntervalShape>   at least one of the three is absent, because the
+#                            source data does not state it. Structurally
+#                            valid; not usable for duration-dependent
+#                            inference unless a duration is present.
+#
+# Validate interval nodes against <AnyIntervalShape> for conformance, and
+# against <CompleteIntervalShape> to find out which intervals can carry
+# duration-dependent inference. Never add invented instants to move an
+# interval from partial to complete.
+# ---------------------------------------------------------------------------
+
+<AnyIntervalShape> @<CompleteIntervalShape> OR @<PartialIntervalShape>
+
+<CompleteIntervalShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [ time:Interval ] ;
+  rdfs:label . * ;
+  rdfs:comment . * ;
+  time:hasBeginning @<InstantShape> ;
+  time:hasDuration @<DurationShape> ;
+  time:hasEnd @<InstantShape>
+}
+
+<PartialIntervalShape> @<IntervalCoreShape> AND NOT @<CompleteIntervalShape>
+
+<IntervalCoreShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [ time:Interval ] ;
+  rdfs:label . * ;
+  rdfs:comment . * ;
+  time:hasBeginning @<InstantShape> ? ;
+  time:hasDuration @<DurationShape> ? ;
+  time:hasEnd @<InstantShape> ?
+}
+
+# CIRO reuses time:inXSDDateTime. Note that OWL-Time (2017) deprecates it in
+# favour of time:inXSDDateTimeStamp; this profile keeps inXSDDateTime for
+# continuity with existing PLOD data.
+<InstantShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [ time:Instant ] ;
+  rdfs:label . * ;
+  rdfs:comment . * ;
+  time:inXSDDateTime xsd:dateTime
+}
+
+# Duration values are normalized to integer minutes. CIRO tests
+# time:numericDuration against xsd:integer with a threshold of minExclusive 15.
+# Both facets stay required: a duration node without a value or a unit cannot
+# be evaluated, and the conversion prompt only creates a duration node when it
+# can supply both.
+<DurationShape> EXTRA rdf:type rdfs:label rdfs:comment {
+  rdf:type [ time:TemporalDuration ] ;
+  rdfs:label . * ;
+  rdfs:comment . * ;
+  time:numericDuration xsd:integer MININCLUSIVE 0 ;
+  time:unitType [ time:unitMinute ]
+}
+
+# ---------------------------------------------------------------------------
+# Value sets. Each list is exactly the set of owl:NamedIndividual declarations
+# of the corresponding CIRO class.
+# ---------------------------------------------------------------------------
+
+# plod:Action individuals. plod:eat, plod:frequentlyBreath, plod:removeMask,
+# plod:sing, plod:talk and plod:yell are plod:DropletReachableAction;
+# plod:highTouchSurface and plod:shareThing are plod:IndirectContact.
+# The count of DropletReachableAction values drives CIRO's CloseContact levels.
+<ActionValueShape> [
+  plod:eat
+  plod:frequentlyBreath
+  plod:highTouchSurface
+  plod:removeMask
+  plod:shareThing
+  plod:sing
+  plod:talk
+  plod:yell
+]
+
+<BehavioralContextValueShape> [
+  plod:alcoholDrinking
+  plod:facetoface
+  plod:fiveOrMorePeople
+  plod:relax
+]
+
+<SpatialContextValueShape> [
+  plod:crowded
+  plod:smallSpace
+]
+
+<ContextValueShape> @<BehavioralContextValueShape>
+                 OR @<SpatialContextValueShape>
