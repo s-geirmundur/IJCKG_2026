@@ -6,56 +6,6 @@ PREFIX time:   <http://www.w3.org/2006/time#>
 PREFIX plod:   <http://plod.info/rdf/>
 PREFIX data:   <http://plod.info/data/>
 
-# PLOD application profile for RDF generated from patient behavior-history JSON.
-# Version 2.0 — relaxed profile, aligned with JSON2RDF prompt v2.
-#
-# Normative vocabulary source:
-#   CIRO (COVID-19 Infection Risk Ontology)
-#
-# Namespaces:
-# - plod: is the CIRO vocabulary namespace. No new resources are minted here.
-# - data: is the namespace for generated instance resources.
-#
-# Modeling rules applied by this profile:
-# - Attach behavioral risk contexts to schema:Event with plod:context.
-# - Attach spatial (and, when relevant, behavioral) risk contexts to
-#   plod:Situation with plod:context.
-# - Do not use legacy properties such as plod:situationOfActivity.
-# - Do not use plod:situationOfAction or plod:situationOfSpace on events or
-#   situations. In CIRO they are subproperties of plod:situation, whose domain
-#   is schema:Place.
-# - Represent interval boundaries with time:Instant resources.
-# - Represent duration explicitly as an integer number of minutes. This makes
-#   CIRO's numeric duration restrictions evaluable without unit conversion.
-#
-# Changes from version 1.0:
-# - Interval representation is split into <CompleteIntervalShape> and
-#   <PartialIntervalShape>. Version 1.0 required beginning, end and duration
-#   on every interval, which made every event with a missing clock time
-#   nonconformant and left ShEx validation unable to distinguish real
-#   structural errors from expected source-data gaps. The two shapes are
-#   mutually exclusive, so the shape a node satisfies now reports whether the
-#   interval is usable for duration-dependent inference.
-# - schema:location on <EventShape> is optional. The conversion prompt forbids
-#   inventing a place that is not in the source data, so an unknown place must
-#   not make the event nonconformant.
-# - Properties the prompt forbids are now enforced with {0} cardinality on
-#   <EventShape> and <SituationShape> instead of being left to prose. In
-#   version 1.0 they were only mentioned in comments, so a graph using them
-#   still validated.
-#
-# Deliberately NOT constrained here:
-# - plod:afford is not mentioned in <PlaceShape>. CIRO asserts afford at the
-#   class level, and some afforded individuals (e.g. plod:alcoholDrinking) are
-#   declared only as plod:BehavioralRiskContext, so listing plod:afford with a
-#   value set would reject ontology-derived data. Shapes are open, so afford
-#   triples are simply ignored by this profile.
-#
-# ShEx validates graph structure only. It does not infer rdf:type
-# plod:CloseContact, plod:Crowding, plod:ClosedSpace or their level
-# subclasses. Report structural conformance and reasoner classification
-# separately.
-
 START = @<EventShape>
      OR @<SituationShape>
      OR @<PlaceShape>
